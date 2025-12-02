@@ -1,7 +1,9 @@
-"use client"; // Tambahkan ini agar aman saat passing function
+"use client";
 
-import { Dashboard } from "../components/dashboard"; // Pastikan path & Huruf 'D' Besar
-import type { Category, Product, Transaction } from "../types"; // Pastikan path types benar
+import { useState } from 'react';
+import { Dashboard } from "../components/dashboard"; 
+import { PaymentPage } from "../components/payment";
+import type { Category, Product, Transaction } from "../types";
 
 // --- DATA DUMMY ---
 const CATEGORIES: Category[] = [
@@ -11,7 +13,7 @@ const CATEGORIES: Category[] = [
   { id: 'cat-lainnya', name: 'Lainnya', color: 'bg-purple-500' },
 ];
 
-const PRODUCTS: Product[] = [
+const INITIAL_PRODUCTS: Product[] = [
   { id: 'prod-1', name: 'Nasi Goreng', price: 25000, categoryId: 'cat-makanan', stock: 50, image: 'https://images.unsplash.com/photo-1603133872878-684f1084261d?w=400&q=80' },
   { id: 'prod-2', name: 'Mie Goreng', price: 22000, categoryId: 'cat-makanan', stock: 45 },
   { id: 'prod-3', name: 'Ayam Goreng', price: 30000, categoryId: 'cat-makanan', stock: 30 },
@@ -23,27 +25,60 @@ const PRODUCTS: Product[] = [
 ];
 
 export default function Home() {
-  // Fungsi Dummy untuk menangani aksi dari Dashboard
+  // State untuk Data Produk (Supaya stok bisa berkurang)
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  
+  // State Navigasi Halaman
+  const [currentView, setCurrentView] = useState<'dashboard' | 'payment'>('dashboard');
+  
+  // State Transaksi yang sedang diproses
+  const [activeTransaction, setActiveTransaction] = useState<Transaction | null>(null);
+
+  // 1. Fungsi saat tombol "Konfirmasi Transaksi" diklik di Dashboard
   const handleCreatePayment = (transaction: Transaction) => {
-    console.log("Memproses Pembayaran:", transaction);
-    alert(`Simulasi: Pembayaran senilai Rp ${transaction.total.toLocaleString()} berhasil!`);
+    setActiveTransaction(transaction); // Simpan data transaksi
+    setCurrentView('payment'); // Pindah ke halaman pembayaran
   };
 
-  const handleNavigate = () => {
-    console.log("Navigasi dipanggil (Halaman belum dibuat)");
-    alert("Fitur navigasi ini belum tersedia di demo ini.");
+  // 2. Fungsi saat Pembayaran Berhasil
+  const handlePaymentSuccess = (transaction: Transaction) => {
+    // Kurangi Stok Produk
+    setProducts(prevProducts => prevProducts.map(p => {
+      const itemInCart = transaction.items.find(item => item.product.id === p.id);
+      if (itemInCart) {
+        return { ...p, stock: p.stock - itemInCart.quantity };
+      }
+      return p;
+    }));
+
+    alert("Transaksi Selesai! Stok telah diperbarui.");
+    setActiveTransaction(null);
+    setCurrentView('dashboard'); // Kembali ke Dashboard
   };
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Dashboard 
-        products={PRODUCTS} 
-        categories={CATEGORIES}
-        // Props tambahan ini WAJIB ada karena Dashboard.tsx memintanya
-        onCreatePayment={handleCreatePayment}
-        onNavigateToHistory={handleNavigate}
-        onNavigateToProducts={handleNavigate}
-      />
+      
+      {/* TAMPILAN DASHBOARD */}
+      {currentView === 'dashboard' && (
+        <Dashboard 
+          products={products} 
+          categories={CATEGORIES}
+          onCreatePayment={handleCreatePayment}
+          onNavigateToHistory={() => console.log("Ke Riwayat")}
+          onNavigateToProducts={() => console.log("Ke Produk")}
+        />
+      )}
+
+      {/* TAMPILAN PAYMENT (Muncul jika currentView === 'payment') */}
+      {currentView === 'payment' && activeTransaction && (
+        <PaymentPage 
+          transaction={activeTransaction}
+          onPaymentSuccess={handlePaymentSuccess}
+          onCancel={() => setCurrentView('dashboard')}
+        />
+      )}
+
     </main>
   );
 }
