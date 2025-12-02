@@ -41,8 +41,8 @@ export default function Home() {
   };
 
   const handleNavigateToHistory = () => {
-    console.log("Navigasi dipanggil (Halaman belum dibuat)");
-    alert("Fitur navigasi ini belum tersedia di demo ini.");
+    console.log("Navigasi ke riwayat transaksi");
+    router.push('/history');
   };
 
   return (
