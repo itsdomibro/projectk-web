@@ -1,17 +1,28 @@
-"use client"; // Tambahkan ini agar aman saat passing function
+"use client";
 
 import { useRouter } from "next/navigation";
-import { Dashboard } from "../components/dashboard"; // Pastikan path & Huruf 'D' Besar
-import type { Category, Product, Transaction } from "../types"; // Pastikan path types benar
-import { useProductStore } from "@/store/productStore"; // Import Store
+import { Dashboard } from "../components/dashboard";
+import { useTransactionStore } from "../store/transactionStore";
+import type { Category, Product, Transaction } from "../types";
+import { useProductStore } from "../store/productStore"; // Import Store
+
 
 export default function Home() {
   const router = useRouter();
-  // Use data from the global store
+  const { addTransaction } = useTransactionStore();
   const { products, categories, updateStock } = useProductStore();
 
   // Fungsi Dummy untuk menangani aksi dari Dashboard
   const handleCreatePayment = (transaction: Transaction) => {
+    // 1. Save to global store
+    addTransaction({
+      ...transaction,
+      status: 'completed', // For hackathon demo, mark as completed immediately
+      date: new Date().toISOString()
+    });
+    
+    // 2. Show success (Optional: Replace with a Sonner toast or Payment Modal)
+    alert(`Pembayaran berhasil sebesar Rp ${transaction.total.toLocaleString()}`);
    console.log("Processing Payment:", transaction);
     
     // Update the global stock based on transaction items
@@ -38,7 +49,6 @@ export default function Home() {
       <Dashboard 
         products={products} 
         categories={categories}
-        // Props tambahan ini WAJIB ada karena Dashboard.tsx memintanya
         onCreatePayment={handleCreatePayment}
         onNavigateToHistory={handleNavigateToHistory}
         onNavigateToProducts={handleNavigateToProducts}
