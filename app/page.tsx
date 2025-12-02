@@ -1,9 +1,11 @@
-"use client"; // Tambahkan ini agar aman saat passing function
+"use client";
 
-import { Dashboard } from "../components/dashboard"; // Pastikan path & Huruf 'D' Besar
-import type { Category, Product, Transaction } from "../types"; // Pastikan path types benar
+import { useRouter } from "next/navigation";
+import { Dashboard } from "@/components/dashboard";
+import { useTransactionStore } from "@/store/transactionStore";
+import type { Category, Product, Transaction } from "@/types";
 
-// --- DATA DUMMY ---
+// --- DATA DUMMY (Keep your existing data) ---
 const CATEGORIES: Category[] = [
   { id: 'cat-makanan', name: 'Makanan', color: 'bg-orange-500' },
   { id: 'cat-minuman', name: 'Minuman', color: 'bg-blue-500' },
@@ -23,15 +25,19 @@ const PRODUCTS: Product[] = [
 ];
 
 export default function Home() {
-  // Fungsi Dummy untuk menangani aksi dari Dashboard
-  const handleCreatePayment = (transaction: Transaction) => {
-    console.log("Memproses Pembayaran:", transaction);
-    alert(`Simulasi: Pembayaran senilai Rp ${transaction.total.toLocaleString()} berhasil!`);
-  };
+  const router = useRouter();
+  const { addTransaction } = useTransactionStore();
 
-  const handleNavigate = () => {
-    console.log("Navigasi dipanggil (Halaman belum dibuat)");
-    alert("Fitur navigasi ini belum tersedia di demo ini.");
+  const handleCreatePayment = (transaction: Transaction) => {
+    // 1. Save to global store
+    addTransaction({
+      ...transaction,
+      status: 'completed', // For hackathon demo, mark as completed immediately
+      date: new Date().toISOString()
+    });
+    
+    // 2. Show success (Optional: Replace with a Sonner toast or Payment Modal)
+    alert(`Pembayaran berhasil sebesar Rp ${transaction.total.toLocaleString()}`);
   };
 
   return (
@@ -39,10 +45,9 @@ export default function Home() {
       <Dashboard 
         products={PRODUCTS} 
         categories={CATEGORIES}
-        // Props tambahan ini WAJIB ada karena Dashboard.tsx memintanya
         onCreatePayment={handleCreatePayment}
-        onNavigateToHistory={handleNavigate}
-        onNavigateToProducts={handleNavigate}
+        onNavigateToHistory={() => router.push('/history')} // This links to the new page
+        onNavigateToProducts={() => alert("Product Management Page coming soon!")}
       />
     </main>
   );
