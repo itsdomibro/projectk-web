@@ -26,7 +26,6 @@ export function Sidebar() {
     { name: "Products", icon: Package, href: "/owner/products" },
     { name: "Transactions", icon: ShoppingCart, href: "/owner/transactions" },
     { name: "Cashier Management", icon: Users, href: "/owner/cashier" },
-    { name: "Settings", icon: Settings, href: "/owner/settings" },
   ];
 
   return (

@@ -182,7 +182,7 @@ export default function OwnerDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
            {/* FILTER TANGGAL */}
-           <div className="bg-white border border-gray-200 rounded-lg p-1 flex gap-1 overflow-x-auto max-w-full">
+          <div className="bg-white border border-gray-200 rounded-lg p-1 flex gap-1 overflow-x-auto max-w-full">
               {filterOptions.map((opt) => (
                 <button
                   key={opt.value}
@@ -196,7 +196,7 @@ export default function OwnerDashboardPage() {
                   {opt.label}
                 </button>
               ))}
-           </div>
+          </div>
         </div>
       </div>
 
@@ -366,8 +366,8 @@ export default function OwnerDashboardPage() {
           </div>
         ) : (
           <div className="text-center py-12 border-2 border-dashed border-purple-100 rounded-xl bg-white/50">
-             <Sparkles className="w-12 h-12 text-purple-200 mx-auto mb-3" />
-             <p className="text-gray-500">Klik tombol di atas untuk mendapatkan analisis otomatis.</p>
+            <Sparkles className="w-12 h-12 text-purple-200 mx-auto mb-3" />
+            <p className="text-gray-500">Klik tombol di atas untuk mendapatkan analisis otomatis.</p>
           </div>
         )}
       </div>

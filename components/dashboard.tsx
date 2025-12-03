@@ -127,9 +127,6 @@ export function Dashboard({ products, categories, onCreatePayment, onNavigateToH
           <p className="text-gray-500">Buat transaksi baru untuk pelanggan</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={onNavigateToProducts} className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition">
-            <Package className="w-4 h-4" /> Kelola Produk
-          </button>
           <button onClick={onNavigateToHistory} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
             <History className="w-4 h-4" /> Riwayat
           </button>
