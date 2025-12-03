@@ -89,13 +89,6 @@ export default function CashierManagementPage() {
           <h1 className="text-gray-900 text-2xl font-bold mb-1">Manajemen Kasir</h1>
           <p className="text-gray-600">Kelola akses dan akun karyawan toko Anda</p>
         </div>
-        <button
-          onClick={() => alert("Fitur AI Assistant akan segera hadir!")}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors w-fit shadow-sm font-medium"
-        >
-          <MessageSquare className="w-5 h-5" />
-          AI Assistant
-        </button>
       </div>
 
       {/* Stats Cards */}

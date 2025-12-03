@@ -37,7 +37,6 @@ export default function Home() {
 
     setActiveTransaction(null);
     setCurrentView('dashboard');
-    alert(`Pembayaran berhasil!`);
   };
 
   return (
