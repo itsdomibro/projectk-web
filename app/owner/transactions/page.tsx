@@ -1,18 +1,33 @@
 "use client";
 
-import { useState } from 'react';
-import { Calendar, Filter, Search, ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Filter, Search, ArrowDownRight, DollarSign, ShoppingCart, Clock } from 'lucide-react';
 import { useTransactionStore } from '@/store/transactionStore';
 
 export default function TransactionsPage() {
-  // Ambil data transaksi dari Store Global
+  const router = useRouter();
   const { transactions } = useTransactionStore();
   
-  // State untuk Filter
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Fungsi helper untuk mendapatkan format tanggal YYYY-MM-DD (Local Time)
+  const getTodayDate = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // State untuk Filter - Default ke HARI INI
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
+  
   const [showFilter, setShowFilter] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // State untuk hydration fix
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
 
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -30,7 +45,8 @@ export default function TransactionsPage() {
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
 
-    if (end) end.setHours(23, 59, 59); // Sampai akhir hari
+    if (start) start.setHours(0, 0, 0, 0); // Mulai dari awal hari
+    if (end) end.setHours(23, 59, 59, 999); // Sampai akhir hari
 
     // Filter Range Tanggal
     if (start && txnDate < start) return false;
@@ -40,7 +56,7 @@ export default function TransactionsPage() {
     if (searchTerm && !txn.id.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
     return true;
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Urutkan dari yang terbaru
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Hitung Statistik Ringkas berdasarkan hasil filter
   const totalRevenue = filteredTransactions
@@ -50,13 +66,22 @@ export default function TransactionsPage() {
   const successCount = filteredTransactions.filter(t => t.status === 'completed').length;
   const voidCount = filteredTransactions.filter(t => t.status === 'void').length;
 
+  if (!isMounted) return null;
+
   return (
-    <div className="space-y-6 pb-10">
+    // PERBAIKAN 1: Menggunakan w-full agar layout lebar penuh (tidak ditengah)
+    <div className="space-y-6 pb-10 p-6 md:p-8 w-full">
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Riwayat Transaksi</h1>
-          <p className="text-gray-600">Pantau semua transaksi yang masuk secara real-time</p>
+          <p className="text-gray-600">
+            {startDate === endDate && startDate === getTodayDate() 
+              ? "Menampilkan data hari ini"
+              : `Menampilkan data dari ${startDate} sampai ${endDate}`
+            }
+          </p>
         </div>
         <div className="flex gap-2">
            <div className="relative">
@@ -81,31 +106,31 @@ export default function TransactionsPage() {
       {/* Stats Cards (Ringkasan) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-           <div>
+          <div>
               <p className="text-gray-500 text-sm">Total Pendapatan</p>
               <h3 className="text-xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</h3>
-           </div>
-           <div className="p-2 bg-green-100 rounded-lg text-green-600">
+          </div>
+          <div className="p-2 bg-green-100 rounded-lg text-green-600">
               <DollarSign className="w-5 h-5" />
-           </div>
+          </div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-           <div>
+          <div>
               <p className="text-gray-500 text-sm">Transaksi Berhasil</p>
               <h3 className="text-xl font-bold text-gray-900">{successCount}</h3>
-           </div>
-           <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+          </div>
+          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
               <ShoppingCart className="w-5 h-5" />
-           </div>
+          </div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-           <div>
+          <div>
               <p className="text-gray-500 text-sm">Dibatalkan (Void)</p>
               <h3 className="text-xl font-bold text-gray-900">{voidCount}</h3>
-           </div>
-           <div className="p-2 bg-red-100 rounded-lg text-red-600">
+          </div>
+          <div className="p-2 bg-red-100 rounded-lg text-red-600">
               <ArrowDownRight className="w-5 h-5" />
-           </div>
+          </div>
         </div>
       </div>
 
@@ -131,12 +156,17 @@ export default function TransactionsPage() {
             />
           </div>
           <div className="flex items-end">
-             <button 
-                onClick={() => { setStartDate(''); setEndDate(''); setSearchTerm(''); }}
+            <button 
+                onClick={() => { 
+                  const today = getTodayDate();
+                  setStartDate(today); 
+                  setEndDate(today); 
+                  setSearchTerm(''); 
+                }}
                 className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-             >
-                Reset Semua Filter
-             </button>
+            >
+                Reset ke Hari Ini
+            </button>
           </div>
         </div>
       )}
@@ -159,14 +189,18 @@ export default function TransactionsPage() {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                       <Clock className="w-10 h-10 text-gray-200" />
-                       <p>Belum ada transaksi yang sesuai.</p>
+                      <Clock className="w-10 h-10 text-gray-200" />
+                      <p>Belum ada transaksi pada periode ini.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 filteredTransactions.map((txn) => (
-                  <tr key={txn.id} className="hover:bg-gray-50 transition-colors group">
+                  <tr 
+                    key={txn.id} 
+                    onClick={() => router.push(`/owner/transactions/${txn.id}`)}
+                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                  >
                     <td className="px-6 py-4 font-mono text-gray-500 group-hover:text-blue-600 transition-colors">
                       #{txn.id.slice(-6)}
                     </td>
@@ -175,12 +209,18 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        {txn.items.map((item, idx) => (
+                        {/* PERBAIKAN 2: Hanya menampilkan maksimal 2 barang */}
+                        {txn.items.slice(0, 2).map((item, idx) => (
                           <span key={idx} className="text-gray-600">
                             {item.product.name} <span className="text-gray-400">x{item.quantity}</span>
                           </span>
                         ))}
-                        {txn.items.length > 2 && <span className="text-xs text-gray-400 italic">...dan lainnya</span>}
+                        {/* Jika lebih dari 2, tampilkan '...dan lainnya' */}
+                        {txn.items.length > 2 && (
+                          <span className="text-xs text-gray-400 italic">
+                            ...dan {txn.items.length - 2} lainnya
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 font-bold text-gray-900">

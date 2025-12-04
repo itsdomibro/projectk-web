@@ -2,20 +2,20 @@
 
 import { useState } from 'react';
 import { Sidebar } from "@/components/owner/sidebar";
-import { ChatbotSidebar } from "@/components/ChatbotSidebar"; // Import komponen baru
+import { ChatbotSidebar } from "@/components/ChatbotSidebar"; 
 import { Menu, MessageSquare } from 'lucide-react';
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false); // State untuk Chatbot Sidebar
+  const [isChatOpen, setIsChatOpen] = useState(false); 
 
   return (
     <div className="flex h-screen w-full bg-gray-100 overflow-hidden relative">
-      {/* Sidebar Utama */}
+      {/* Kiri: Sidebar Utama */}
       <Sidebar isCollapsed={isCollapsed} />
 
-      {/* Area Konten Utama */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative w-full transition-all duration-300">
+      {/* Tengah: Area Konten Utama */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative min-w-0 transition-all duration-300">
         
         {/* Header Bar */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
@@ -32,8 +32,12 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 
           {/* Kanan: Tombol AI Assistant */}
           <button
-            onClick={() => setIsChatOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-sm font-medium hover:shadow-md active:scale-95"
+            onClick={() => setIsChatOpen(!isChatOpen)} // Toggle state
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-sm font-medium hover:shadow-md active:scale-95 ${
+              isChatOpen 
+                ? 'bg-purple-700 text-white ring-2 ring-purple-300' 
+                : 'bg-purple-600 text-white hover:bg-purple-700'
+            }`}
           >
             <MessageSquare className="w-5 h-5" />
             <span>AI Assistant</span>
@@ -46,16 +50,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
 
-      {/* Sidebar Chatbot (Overlay dari kanan) */}
-      {/* Overlay Gelap (Optional, klik luar untuk tutup) */}
-      {isChatOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-50 transition-opacity"
-          onClick={() => setIsChatOpen(false)}
-        />
-      )}
-      
-      {/* Komponen Sidebar Chatbot */}
+      {/* Kanan: Sidebar Chatbot (Sekarang mendorong konten, bukan overlay) */}
       <ChatbotSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );

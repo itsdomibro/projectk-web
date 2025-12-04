@@ -6,6 +6,7 @@ interface TransactionState {
   transactions: Transaction[];
   addTransaction: (transaction: Transaction) => void;
   voidTransaction: (id: string) => void;
+  deleteTransaction: (id: string) => void; 
 }
 
 export const useTransactionStore = create<TransactionState>()(
@@ -22,9 +23,13 @@ export const useTransactionStore = create<TransactionState>()(
             t.id === id ? { ...t, status: 'void' } : t
           ),
         })),
+      deleteTransaction: (id) =>
+        set((state) => ({
+          transactions: state.transactions.filter((t) => t.id !== id),
+        })),
     }),
     {
-      name: 'transaction-storage', // This saves data to localStorage
+      name: 'transaction-storage',
     }
   )
 );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, ShoppingCart, Package, MessageSquare, Sparkles, Calendar } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingCart, Package, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 import { useTransactionStore } from '@/store/transactionStore';
@@ -11,11 +11,11 @@ type DateFilter = '1day' | '7days' | '1month' | '3months' | '6months' | '1year';
 
 const filterOptions: { value: DateFilter; label: string }[] = [
   { value: '1day', label: 'Hari Ini' },
-  { value: '7days', label: '7 Hari' },
-  { value: '1month', label: '1 Bulan' },
-  { value: '3months', label: '3 Bulan' },
-  { value: '6months', label: '6 Bulan' },
-  { value: '1year', label: '1 Tahun' },
+  { value: '7days', label: '7 Hari Terakhir' },
+  { value: '1month', label: '1 Bulan Terakhir' },
+  { value: '3months', label: '3 Bulan Terakhir' },
+  { value: '6months', label: '6 Bulan Terakhir' },
+  { value: '1year', label: '1 Tahun Terakhir' },
 ];
 
 export default function OwnerDashboardPage() {
@@ -81,9 +81,9 @@ export default function OwnerDashboardPage() {
   });
 
   const topProducts = Object.values(productSales)
-    .sort((a, b) => b.quantity - a.quantity) // Sort berdasarkan quantity
-    .reverse() // Terbanyak di kiri
-    .slice(0, 5); // Ambil Max 5
+    .sort((a, b) => b.quantity - a.quantity)
+    .reverse()
+    .slice(0, 5);
 
   // --- LOGIKA GRAFIK PENJUALAN ---
   const getDailySales = () => {
@@ -117,7 +117,7 @@ export default function OwnerDashboardPage() {
           .filter(t => new Date(t.date).toDateString() === dateStr)
           .reduce((sum, t) => sum + t.total, 0);
         
-        data.push({ label: dayName, total: total / 1000 }); // Dalam Ribuan
+        data.push({ label: dayName, total: total / 1000 });
       }
     } else if (groupBy === 'week') {
       for (let i = 0; i < dataPoints; i++) {
@@ -138,7 +138,6 @@ export default function OwnerDashboardPage() {
       for (let i = 0; i < 12; i++) {
         const date = new Date();
         date.setMonth(date.getMonth() - (11 - i));
-        // HANYA BULAN (Tanpa Tanggal) untuk filter bulanan/tahunan
         const monthLabel = date.toLocaleDateString('id-ID', { month: 'short' });
         const monthIdx = date.getMonth();
         const year = date.getFullYear();
@@ -170,10 +169,15 @@ export default function OwnerDashboardPage() {
     setIsGenerating(false);
   };
 
-  const getPeriodLabel = () => filterOptions.find(f => f.value === dateFilter)?.label || '';
+  // Helper untuk menampilkan label periode yang dipilih
+  const getPeriodLabel = () => {
+    return filterOptions.find(f => f.value === dateFilter)?.label || '';
+  };
 
   return (
-    <div className="space-y-8 pb-10">
+    // PERBAIKAN: Mengganti max-w-7xl mx-auto dengan w-full agar tidak terlalu tengah
+    <div className="space-y-8 pb-10 p-6 md:p-8 w-full">
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
@@ -208,14 +212,20 @@ export default function OwnerDashboardPage() {
             <DollarSign className="w-5 h-5 text-blue-500" />
           </div>
           <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
+          {/* PERBAIKAN: Menambahkan label periode di sini */}
+          <div className="text-xs text-gray-500 mt-1 font-medium">{getPeriodLabel()}</div>
         </div>
+        
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
           <div className="flex justify-between mb-2">
             <span className="text-gray-500 text-sm">Transaksi</span>
             <ShoppingCart className="w-5 h-5 text-green-500" />
           </div>
           <div className="text-2xl font-bold text-gray-900">{totalTransactions}</div>
+          {/* PERBAIKAN: Menambahkan label periode di sini */}
+          <div className="text-xs text-gray-500 mt-1 font-medium">{getPeriodLabel()}</div>
         </div>
+        
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-orange-500">
           <div className="flex justify-between mb-2">
             <span className="text-gray-500 text-sm">Produk</span>
@@ -224,6 +234,7 @@ export default function OwnerDashboardPage() {
           <div className="text-2xl font-bold text-gray-900">{products.length}</div>
           <div className="text-xs text-red-500 font-medium mt-1">{lowStockProducts} stok tipis</div>
         </div>
+        
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
           <div className="flex justify-between mb-2">
             <span className="text-gray-500 text-sm">Rata-rata</span>
@@ -232,6 +243,8 @@ export default function OwnerDashboardPage() {
           <div className="text-2xl font-bold text-gray-900">
             {formatCurrency(totalTransactions > 0 ? totalRevenue / totalTransactions : 0)}
           </div>
+          {/* PERBAIKAN: Menambahkan label periode di sini */}
+          <div className="text-xs text-gray-500 mt-1 font-medium">Per Transaksi</div>
         </div>
       </div>
 
@@ -255,7 +268,7 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
 
-          {/* CHART 2: TOP PRODUK (Bar - VERTIKAL & DINAMIS) */}
+          {/* CHART 2: TOP PRODUK (Bar) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-gray-900 font-bold mb-6">Top 5 Produk (Unit Terjual)</h3>
             <div className="h-[300px] w-full">
@@ -265,9 +278,6 @@ export default function OwnerDashboardPage() {
                   <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip formatter={(val) => `${val} unit`} cursor={{fill: '#f8f9fa'}} contentStyle={{ borderRadius: '8px' }} />
-                  
-                  {/* PERBAIKAN UTAMA DISINI: */}
-                  {/* maxBarSize membuat bar membesar jika item sedikit, tapi tidak berlebihan */}
                   <Bar 
                     dataKey="quantity" 
                     fill="#10B981" 
@@ -279,7 +289,7 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
 
-          {/* CHART 3: PIE CHART (Full Circle) */}
+          {/* CHART 3: PIE CHART */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-gray-900 font-bold mb-6">Distribusi Pendapatan</h3>
             <div className="flex flex-col md:flex-row items-center">
