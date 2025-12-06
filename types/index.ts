@@ -1,18 +1,14 @@
-export type Category = {
-  id: string;
+export type Product = {
+  productId: string;
   name: string;
-  color: string;
+  description: string | null;
+  price: number;
+  discount: number;
+  categoryId: string | null;
+  categoryName: string | null;
+  imageUrl: string | null;
 };
 
-export type Product = {
-  id: string;
-  name: string;
-  price: number;
-  categoryId: string;
-  stock: number;
-  description?: string;
-  image?: string;
-};
 
 export type TransactionItem = {
   product: Product;
