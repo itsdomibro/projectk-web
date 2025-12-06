@@ -206,17 +206,6 @@ export default function ProductManagementPage() {
     }
   };
 
-  const colorOptions = [
-    { name: "Biru", value: "bg-blue-500", hex: "#3B82F6" },
-    { name: "Hijau", value: "bg-green-500", hex: "#10B981" },
-    { name: "Merah", value: "bg-red-500", hex: "#EF4444" },
-    { name: "Kuning", value: "bg-yellow-500", hex: "#EAB308" },
-    { name: "Ungu", value: "bg-purple-500", hex: "#8B5CF6" },
-    { name: "Pink", value: "bg-pink-500", hex: "#EC4899" },
-    { name: "Orange", value: "bg-orange-500", hex: "#F97316" },
-    { name: "Indigo", value: "bg-indigo-500", hex: "#6366F1" },
-  ];
-
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -298,7 +287,6 @@ export default function ProductManagementPage() {
                       <th className="py-3 px-4">Deskripsi</th>{" "}
                       {/* Kolom Baru */}
                       <th className="py-3 px-4">Harga</th>
-                      <th className="py-3 px-4">Stok</th>
                       <th className="py-3 px-4 text-right">Aksi</th>
                     </tr>
                   </thead>
@@ -319,8 +307,6 @@ export default function ProductManagementPage() {
                         const category = categories.find(
                           (c) => c.categoryId === product.categoryId
                         );
-                        const isTailwind = isTailwindClass(category?.color);
-
                         return (
                           <tr
                             key={product.productId}
@@ -343,21 +329,10 @@ export default function ProductManagementPage() {
                             <td className="py-3 px-4">
                               {category && (
                                 <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-100 ${
-                                    isTailwind
-                                      ? `${category.color} bg-opacity-10 text-gray-700`
-                                      : "text-white"
-                                  }`}
-                                  style={
-                                    !isTailwind
-                                      ? { backgroundColor: category.color }
-                                      : {}
-                                  }
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-100 text-white`}
                                 >
                                   <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      isTailwind ? category.color : "bg-white"
-                                    }`}
+                                    className={`w-1.5 h-1.5 rounded-fullbg-white`}
                                   ></span>
                                   {category.name}
                                 </span>
@@ -415,7 +390,6 @@ export default function ProductManagementPage() {
                   const productCount = products.filter(
                     (p) => p.categoryId === category.categoryId
                   ).length;
-                  const isTailwind = isTailwindClass(category.color);
 
                   return (
                     <div
@@ -425,14 +399,7 @@ export default function ProductManagementPage() {
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center ${
-                              isTailwind ? category.color : ""
-                            }`}
-                            style={
-                              !isTailwind
-                                ? { backgroundColor: category.color }
-                                : {}
-                            }
+                            className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center`}
                           >
                             <Tag className="w-5 h-5 text-white opacity-80" />
                           </div>
@@ -653,70 +620,6 @@ export default function ProductManagementPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   placeholder="Contoh: Minuman"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Warna Label *
-                </label>
-                <div className="grid grid-cols-5 gap-3 mb-3">
-                  {colorOptions.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() =>
-                        setEditingCategory({
-                          ...editingCategory,
-                          color: color.value,
-                        })
-                      }
-                      className={`h-10 rounded-lg relative flex items-center justify-center ${
-                        color.value
-                      } ${
-                        editingCategory.color === color.value
-                          ? "ring-2 ring-offset-2 ring-blue-500 scale-105 shadow-md"
-                          : "hover:scale-105 transition-transform hover:shadow-sm"
-                      }`}
-                      title={color.name}
-                    >
-                      {editingCategory.color === color.value && (
-                        <Check className="w-4 h-4 text-white" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="relative overflow-hidden w-10 h-10 rounded-full shadow-sm border border-gray-300 shrink-0">
-                    <input
-                      type="color"
-                      value={
-                        !isTailwindClass(editingCategory.color)
-                          ? editingCategory.color
-                          : "#000000"
-                      }
-                      onChange={(e) =>
-                        setEditingCategory({
-                          ...editingCategory,
-                          color: e.target.value,
-                        })
-                      }
-                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700">
-                      Warna Custom
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Klik lingkaran untuk memilih bebas
-                    </p>
-                  </div>
-                  {!isTailwindClass(editingCategory.color) && (
-                    <div className="text-xs font-mono bg-white px-2 py-1 rounded border text-gray-600">
-                      {editingCategory.color}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
