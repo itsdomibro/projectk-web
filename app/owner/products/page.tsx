@@ -125,8 +125,13 @@ export default function ProductManagementPage() {
       };
 
       await productService.update(editingProduct.productId, dto);
-      const refreshed = await productService.getById(editingProduct.productId);
-      updateProduct(refreshed);
+      updateProduct({
+        ...editingProduct,
+        ...dto,
+        productId: editingProduct.productId,
+        categoryName: editingProduct.categoryName ?? null,
+        imageUrl: editingProduct.imageUrl ?? null,
+      } as Product); // cast ke Product supaya tipe cocok
     } else {
       const dto: ProductCreateDto = {
         name: editingProduct.name,
