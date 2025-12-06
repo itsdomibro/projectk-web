@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from "react";
+import { X, Send, Bot, User, Loader2 } from "lucide-react";
 
 type Message = {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: Date;
 };
@@ -18,18 +18,19 @@ type Props = {
 export function ChatbotSidebar({ isOpen, onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      role: 'assistant',
-      content: 'Halo! Saya AI Assistant Owner. Ada yang bisa saya bantu terkait performa toko Anda?',
+      id: "1",
+      role: "assistant",
+      content:
+        "Halo! Saya AI Assistant Owner. Ada yang bisa saya bantu terkait performa toko Anda?",
       timestamp: new Date(),
     },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -41,13 +42,13 @@ export function ChatbotSidebar({ isOpen, onClose }: Props) {
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
+      role: "user",
       content: input,
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setIsTyping(true);
 
     setTimeout(() => {
@@ -55,29 +56,30 @@ export function ChatbotSidebar({ isOpen, onClose }: Props) {
         "Berdasarkan data hari ini, penjualan meningkat 15%.",
         "Stok 'Kopi Susu' menipis, segera lakukan restock.",
         "Ada 3 transaksi yang dibatalkan hari ini, cek menu riwayat.",
-        "Saya merekomendasikan promosi untuk kategori Snack."
+        "Saya merekomendasikan promosi untuk kategori Snack.",
       ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      const randomResponse =
+        responses[Math.floor(Math.random() * responses.length)];
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        role: "assistant",
         content: randomResponse,
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
       setIsTyping(false);
     }, 1500);
   };
 
   return (
     // PERUBAHAN: Menghapus 'fixed', mengubah menjadi flex item dengan transisi width
-    <div 
+    <div
       className={`
         flex flex-col h-full bg-white border-l border-gray-200 shadow-xl z-40
         transition-all duration-300 ease-in-out shrink-0
-        ${isOpen ? 'w-96 opacity-100' : 'w-0 opacity-0 overflow-hidden'}
+        ${isOpen ? "w-96 opacity-100" : "w-0 opacity-0 overflow-hidden"}
       `}
     >
       {/* Container dalam dengan lebar tetap agar konten tidak gepeng saat transisi */}
@@ -103,34 +105,43 @@ export function ChatbotSidebar({ isOpen, onClose }: Props) {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-          {messages.map(message => (
+          {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+              className={`flex gap-3 ${
+                message.role === "user" ? "flex-row-reverse" : ""
+              }`}
             >
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.role === 'user' ? 'bg-blue-600' : 'bg-purple-600'
+                  message.role === "user" ? "bg-blue-600" : "bg-purple-600"
                 }`}
               >
-                {message.role === 'user' ? (
+                {message.role === "user" ? (
                   <User className="w-4 h-4 text-white" />
                 ) : (
                   <Bot className="w-4 h-4 text-white" />
                 )}
               </div>
-              <div className={`flex-1 ${message.role === 'user' ? 'text-right' : ''}`}>
+              <div
+                className={`flex-1 ${
+                  message.role === "user" ? "text-right" : ""
+                }`}
+              >
                 <div
                   className={`inline-block px-4 py-2 rounded-2xl text-sm ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-tr-none'
-                      : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-sm'
+                    message.role === "user"
+                      ? "bg-blue-600 text-white rounded-tr-none"
+                      : "bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-sm"
                   }`}
                 >
                   {message.content}
                 </div>
                 <div className="text-[10px] text-gray-400 mt-1 px-1">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </div>
               </div>
             </div>
@@ -143,7 +154,9 @@ export function ChatbotSidebar({ isOpen, onClose }: Props) {
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-2 shadow-sm flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
-                <span className="text-xs text-gray-500">Sedang mengetik...</span>
+                <span className="text-xs text-gray-500">
+                  Sedang mengetik...
+                </span>
               </div>
             </div>
           )}
@@ -152,8 +165,11 @@ export function ChatbotSidebar({ isOpen, onClose }: Props) {
 
         {/* Input Area */}
         <div className="p-4 bg-white border-t border-gray-200 shrink-0">
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
             className="flex gap-2"
           >
             <input
