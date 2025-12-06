@@ -7,6 +7,10 @@ export const productService = {
         return data;
     },
 
+    async getById(id: string): Promise<Product> {
+        const { data } = await api.get(`/products/${id}`)
+        return data;
+    },
     async create(product: ProductCreateDto) {
         const { data } = await api.post("/products", product);
         return data;
