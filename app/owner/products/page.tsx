@@ -105,7 +105,7 @@ export default function ProductManagementPage() {
     setShowProductModal(true);
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (
       !editingProduct ||
       !editingProduct.name ||
@@ -115,23 +115,45 @@ export default function ProductManagementPage() {
       return;
 
     if (editingProduct.productId) {
-      updateProduct(editingProduct as ProductUpdateDto);
-    } else {
-      const newProduct: Product = {
-        ...(editingProduct as Product),
-        productId: `prod-${Date.now()}`,
+      const dto: ProductUpdateDto = {
+        name: editingProduct.name,
+        price: editingProduct.price,
+        discount: editingProduct.discount ?? 0,
+        categoryId: editingProduct.categoryId,
+        description: editingProduct.description ?? "",
+        imageUrl: editingProduct.imageUrl ?? "",
       };
-      addProduct(newProduct);
-    }
 
+      await productService.update(editingProduct.productId, dto);
+      const refreshed = await productService.getById(editingProduct.productId);
+      updateProduct(refreshed);
+    } else {
+      const dto: ProductCreateDto = {
+        name: editingProduct.name,
+        price: editingProduct.price,
+        discount: editingProduct.discount ?? 0,
+        categoryId: editingProduct.categoryId,
+        description: editingProduct.description ?? "",
+        imageUrl: editingProduct.imageUrl ?? "",
+      };
+
+      const created = await productService.create(dto);
+      addProduct(created);
+    }
     setShowProductModal(false);
     setEditingProduct(null);
     setImageUrl("");
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    if (confirm("Yakin ingin menghapus produk ini?")) {
+  const handleDeleteProduct = async (productId: string) => {
+    const confirmed = confirm("Yakin ingin menghapus produk ini?");
+    if (!confirmed) return;
+    try {
+      await productService.remove(productId);
       deleteProduct(productId);
+    } catch (error) {
+      console.error("Gagal menghapus produk", error);
+      alert("Terjadi kesalahan saat menghapus produk!");
     }
   };
 
@@ -139,7 +161,6 @@ export default function ProductManagementPage() {
   const handleAddCategory = () => {
     setEditingCategory({
       name: "",
-      color: "bg-blue-500",
     });
     setShowCategoryModal(true);
   };
@@ -149,25 +170,30 @@ export default function ProductManagementPage() {
     setShowCategoryModal(true);
   };
 
-  const handleSaveCategory = () => {
-    if (!editingCategory || !editingCategory.name || !editingCategory.color)
-      return;
+  const handleSaveCategory = async () => {
+    if (!editingCategory || !editingCategory.name) return;
 
-    if (editingCategory.id) {
-      updateCategory(editingCategory as Category);
-    } else {
-      const newCategory: Category = {
-        ...(editingCategory as Category),
-        id: `cat-${Date.now()}`,
+    if (editingCategory.categoryId) {
+      const dto: CategoryUpdateDto = {
+        name: editingCategory.name,
       };
-      addCategory(newCategory);
+      await categoryService.update(editingCategory.categoryId, dto);
+      updateCategory({
+        categoryId: editingCategory.categoryId,
+        name: editingCategory.name,
+      });
+    } else {
+      const dto: CategoryCreateDto = {
+        name: editingCategory.name,
+      };
+      const created = await categoryService.create(dto);
+      addCategory(created);
     }
-
     setShowCategoryModal(false);
     setEditingCategory(null);
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategory = async (categoryId: string) => {
     const hasProducts = products.some((p) => p.categoryId === categoryId);
     if (hasProducts) {
       alert("Tidak dapat menghapus kategori yang masih memiliki produk!");
@@ -175,6 +201,7 @@ export default function ProductManagementPage() {
     }
 
     if (confirm("Yakin ingin menghapus kategori ini?")) {
+      await categoryService.delete(categoryId);
       deleteCategory(categoryId);
     }
   };
@@ -290,21 +317,21 @@ export default function ProductManagementPage() {
                     ) : (
                       filteredProducts.map((product) => {
                         const category = categories.find(
-                          (c) => c.id === product.categoryId
+                          (c) => c.categoryId === product.categoryId
                         );
                         const isTailwind = isTailwindClass(category?.color);
 
                         return (
                           <tr
-                            key={product.id}
+                            key={product.productId}
                             className="hover:bg-gray-50 transition-colors"
                           >
                             <td className="py-3 px-4 font-medium text-gray-900">
                               <div className="flex items-center gap-3">
-                                {product.image && (
+                                {product.imageUrl && (
                                   <div className="w-8 h-8 rounded bg-gray-100 overflow-hidden shrink-0">
                                     <ImageWithFallback
-                                      src={product.image}
+                                      src={product.imageUrl}
                                       alt={product.name}
                                       className="w-full h-full object-cover"
                                     />
@@ -342,17 +369,6 @@ export default function ProductManagementPage() {
                             <td className="py-3 px-4 font-mono text-gray-600">
                               {formatCurrency(product.price)}
                             </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`font-medium ${
-                                  product.stock <= 10
-                                    ? "text-red-600"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                {product.stock} {product.stock <= 10 && "!"}
-                              </span>
-                            </td>
                             <td className="py-3 px-4 text-right">
                               <div className="flex justify-end gap-2">
                                 <button
@@ -363,7 +379,7 @@ export default function ProductManagementPage() {
                                 </button>
                                 <button
                                   onClick={() =>
-                                    handleDeleteProduct(product.id)
+                                    handleDeleteProduct(product.productId)
                                   }
                                   className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors border border-transparent hover:border-red-100"
                                 >
@@ -397,13 +413,13 @@ export default function ProductManagementPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {categories.map((category) => {
                   const productCount = products.filter(
-                    (p) => p.categoryId === category.id
+                    (p) => p.categoryId === category.categoryId
                   ).length;
                   const isTailwind = isTailwindClass(category.color);
 
                   return (
                     <div
-                      key={category.id}
+                      key={category.categoryId}
                       className="border border-gray-200 rounded-xl p-4 bg-white hover:border-blue-200 hover:shadow-sm transition-all group"
                     >
                       <div className="flex justify-between items-start">
@@ -437,7 +453,9 @@ export default function ProductManagementPage() {
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteCategory(category.id)}
+                            onClick={() =>
+                              handleDeleteCategory(category.categoryId)
+                            }
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                             disabled={productCount > 0}
                           >
@@ -485,17 +503,20 @@ export default function ProductManagementPage() {
                   />
                   <button
                     onClick={() =>
-                      setEditingProduct({ ...editingProduct, image: imageUrl })
+                      setEditingProduct({
+                        ...editingProduct,
+                        imageUrl: imageUrl,
+                      })
                     }
                     className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 font-medium text-gray-700"
                   >
                     Set
                   </button>
                 </div>
-                {(editingProduct.image || imageUrl) && (
+                {(editingProduct.imageUrl || imageUrl) && (
                   <div className="mt-2 h-32 w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
                     <ImageWithFallback
-                      src={editingProduct.image || imageUrl}
+                      src={editingProduct.imageUrl || imageUrl}
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />
@@ -556,22 +577,6 @@ export default function ProductManagementPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Stok *
-                  </label>
-                  <input
-                    type="number"
-                    value={editingProduct.stock || 0}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        stock: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
               </div>
 
               <div>
@@ -589,7 +594,7 @@ export default function ProductManagementPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                 >
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
+                    <option key={cat.categoryId} value={cat.categoryId}>
                       {cat.name}
                     </option>
                   ))}

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Product, ProductCreateDto, ProductUpdateDto } from '@/types/Product';
+import { Product } from '@/types/Product';
 
 // ================================
 // PRODUCT STORE (Backend Synced)
