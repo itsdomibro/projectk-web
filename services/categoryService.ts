@@ -10,11 +10,11 @@ export const categoryService = {
         return (await api.post("/categories", payload)).data;
     },
 
-    async update(id: number, payload: CategoryUpdateDto): Promise<void> {
+    async update(id: string, payload: CategoryUpdateDto): Promise<void> {
         await api.patch(`/categories/${id}`, payload);
     },
 
-    async delete(id: number): Promise<void> {
+    async delete(id: string): Promise<void> {
         await api.delete(`/categories/${id}`);
     },
 };
