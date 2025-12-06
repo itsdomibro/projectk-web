@@ -14,9 +14,21 @@ import {
   Check,
 } from "lucide-react";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-import type { Product, Category } from "@/types";
+import type {
+  Product,
+  ProductCreateDto,
+  ProductUpdateDto,
+} from "@/types/Product";
+import type {
+  Category,
+  CategoryCreateDto,
+  CategoryUpdateDto,
+} from "@/types/Category";
+
 import { useProductStore } from "@/store/productStore";
 import { productService } from "@/services/productService";
+import { useCategoryStore } from "@/store/categoryStore";
+import { categoryService } from "@/services/categoryService";
 
 type EditingProduct = Partial<Product> & { id?: string };
 type EditingCategory = Partial<Category> & { id?: string };
@@ -24,24 +36,28 @@ type EditingCategory = Partial<Category> & { id?: string };
 export default function ProductManagementPage() {
   const router = useRouter();
 
+  const { products, addProduct, updateProduct, deleteProduct, setProducts } =
+    useProductStore();
   const {
-    products,
     categories,
-    addProduct,
-    updateProduct,
-    deleteProduct,
     addCategory,
-    updateCategory,
     deleteCategory,
-    setProducts,
-  } = useProductStore();
+    setCategories,
+    updateCategory,
+  } = useCategoryStore();
 
   useEffect(() => {
-    async function test() {
-      const data = await productService.getAll();
-      setProducts(data);
+    async function getData() {
+      try {
+        const dataProduct = await productService.getAll();
+        const dataCategory = await categoryService.getAll();
+        setProducts(dataProduct);
+        setCategories(dataCategory);
+      } catch (error) {
+        console.error("Failed to get data: ", error);
+      }
     }
-    test();
+    getData();
   }, []);
 
   const [activeTab, setActiveTab] = useState<"products" | "categories">(
@@ -74,16 +90,18 @@ export default function ProductManagementPage() {
     setEditingProduct({
       name: "",
       price: 0,
-      stock: 0,
-      categoryId: categories[0]?.id || "",
+      discount: 0,
+      categoryId: categories[0]?.categoryId || "",
       description: "", // Reset deskripsi
+      imageUrl: "",
     });
+    setImageUrl("");
     setShowProductModal(true);
   };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setImageUrl(product.image || "");
+    setImageUrl(product.imageUrl || "");
     setShowProductModal(true);
   };
 
@@ -96,12 +114,12 @@ export default function ProductManagementPage() {
     )
       return;
 
-    if (editingProduct.id) {
-      updateProduct(editingProduct as Product);
+    if (editingProduct.productId) {
+      updateProduct(editingProduct as ProductUpdateDto);
     } else {
       const newProduct: Product = {
         ...(editingProduct as Product),
-        id: `prod-${Date.now()}`,
+        productId: `prod-${Date.now()}`,
       };
       addProduct(newProduct);
     }
