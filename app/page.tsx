@@ -182,7 +182,9 @@ export default function Home() {
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-6 shadow-lg"
-                  onClick={() => router.push("/owner/dashboard")}
+                  onClick={() => {
+                    onSubmit;
+                  }}
                 >
                   Sign in
                 </Button>
