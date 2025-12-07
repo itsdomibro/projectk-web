@@ -1,17 +1,22 @@
+// types/index.ts
+
 export type Category = {
-  id: string;
+  categoryId: string; // Backend menggunakan CategoryId (Guid)
   name: string;
-  color: string;
+  description?: string;
+  // Color dihapus karena tidak ada di BE, kita generate warna di UI saja nanti
 };
 
 export type Product = {
-  id: string;
+  productId: string; // Backend menggunakan ProductId (Guid)
   name: string;
   price: number;
+  discount: number;
   categoryId: string;
-  stock: number;
+  categoryName?: string; // Dari DTO ProductResponseDto
   description?: string;
-  image?: string;
+  imageUrl?: string;
+  // Stock dihapus karena tidak ada di ERD/BE
 };
 
 export type TransactionItem = {
@@ -19,10 +24,17 @@ export type TransactionItem = {
   quantity: number;
 };
 
+export type TransactionPayload = {
+  payment: string;
+  items: { productId: string; quantity: number }[];
+};
+
 export type Transaction = {
-  id: string;
-  items: TransactionItem[];
-  total: number;
-  date: string;
-  status: 'pending' | 'completed' | 'void';
+  transactionId: string;
+  code: string;
+  payment: string;
+  isPaid: boolean;
+  totalAmount: number;
+  createdAt: string;
+  details: any[]; // Disederhanakan untuk list view
 };

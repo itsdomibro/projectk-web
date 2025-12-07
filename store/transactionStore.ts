@@ -1,35 +1,46 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { Transaction } from '@/types';
+import api from '@/services/api';
+import { Transaction, TransactionPayload } from '@/types';
 
 interface TransactionState {
   transactions: Transaction[];
-  addTransaction: (transaction: Transaction) => void;
-  voidTransaction: (id: string) => void;
-  deleteTransaction: (id: string) => void; 
+  isLoading: boolean;
+  
+  fetchTransactions: () => Promise<void>;
+  createTransaction: (payload: TransactionPayload) => Promise<boolean>;
 }
 
-export const useTransactionStore = create<TransactionState>()(
-  persist(
-    (set) => ({
-      transactions: [],
-      addTransaction: (transaction) =>
-        set((state) => ({
-          transactions: [...state.transactions, transaction],
-        })),
-      voidTransaction: (id) =>
-        set((state) => ({
-          transactions: state.transactions.map((t) =>
-            t.id === id ? { ...t, status: 'void' } : t
-          ),
-        })),
-      deleteTransaction: (id) =>
-        set((state) => ({
-          transactions: state.transactions.filter((t) => t.id !== id),
-        })),
-    }),
-    {
-      name: 'transaction-storage',
+export const useTransactionStore = create<TransactionState>((set) => ({
+  transactions: [],
+  isLoading: false,
+
+  fetchTransactions: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await api.get('/transactions');
+      set({ transactions: res.data });
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error);
+    } finally {
+      set({ isLoading: false });
     }
-  )
-);
+  },
+
+  createTransaction: async (payload: TransactionPayload) => {
+    set({ isLoading: true });
+    try {
+      // Kirim format { payment: "QRIS", items: [{ productId: "...", quantity: 1 }] }
+      await api.post('/transactions', payload);
+      
+      // Refresh list transaksi setelah sukses
+      const res = await api.get('/transactions');
+      set({ transactions: res.data });
+      return true;
+    } catch (error) {
+      console.error("Failed to create transaction:", error);
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+}));

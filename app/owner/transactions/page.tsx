@@ -4,11 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Filter, Search, ArrowDownRight, DollarSign, ShoppingCart, Clock } from 'lucide-react';
 import { useTransactionStore } from '@/store/transactionStore';
+// Pastikan Anda mengimpor tipe Transaction yang sudah diperbarui di types/index.ts
+import type { Transaction } from '@/types'; 
 
 export default function TransactionsPage() {
   const router = useRouter();
-  const { transactions } = useTransactionStore();
+  const { transactions, fetchTransactions, isLoading } = useTransactionStore();
   
+  // Ambil data saat komponen dimuat
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
   // Fungsi helper untuk mendapatkan format tanggal YYYY-MM-DD (Local Time)
   const getTodayDate = () => {
     const d = new Date();
@@ -18,10 +25,9 @@ export default function TransactionsPage() {
     return `${year}-${month}-${day}`;
   };
 
-  // State untuk Filter - Default ke HARI INI
+  // State untuk Filter
   const [startDate, setStartDate] = useState(getTodayDate());
   const [endDate, setEndDate] = useState(getTodayDate());
-  
   const [showFilter, setShowFilter] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -40,36 +46,44 @@ export default function TransactionsPage() {
   };
 
   // --- LOGIKA FILTER ---
-  const filteredTransactions = transactions.filter(txn => {
-    const txnDate = new Date(txn.date);
+  const filteredTransactions = transactions.filter((txn) => {
+    // 1. Filter Tanggal (createdAt)
+    const txnDate = new Date(txn.createdAt);
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
 
-    if (start) start.setHours(0, 0, 0, 0); // Mulai dari awal hari
-    if (end) end.setHours(23, 59, 59, 999); // Sampai akhir hari
+    if (start) start.setHours(0, 0, 0, 0);
+    if (end) end.setHours(23, 59, 59, 999);
 
-    // Filter Range Tanggal
     if (start && txnDate < start) return false;
     if (end && txnDate > end) return false;
     
-    // Filter Pencarian ID
-    if (searchTerm && !txn.id.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    // 2. Filter Pencarian (Code, Payment, atau Nama Produk)
+    if (searchTerm) {
+      const lowerTerm = searchTerm.toLowerCase();
+      const matchCode = txn.code?.toLowerCase().includes(lowerTerm);
+      // Cek apakah ada produk dalam detail yang namanya cocok
+      const matchProduct = txn.details?.some(d => d.productName.toLowerCase().includes(lowerTerm));
+      
+      if (!matchCode && !matchProduct) return false;
+    }
 
     return true;
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  // Hitung Statistik Ringkas berdasarkan hasil filter
+  // Hitung Statistik Ringkas
+  // Backend mengirim 'IsPaid', jadi kita anggap 'completed' jika isPaid = true
   const totalRevenue = filteredTransactions
-    .filter(t => t.status === 'completed')
-    .reduce((sum, t) => sum + t.total, 0);
+    .filter(t => t.isPaid)
+    .reduce((sum, t) => sum + t.totalAmount, 0);
     
-  const successCount = filteredTransactions.filter(t => t.status === 'completed').length;
-  const voidCount = filteredTransactions.filter(t => t.status === 'void').length;
+  const successCount = filteredTransactions.filter(t => t.isPaid).length;
+  // Pending count menggantikan void count karena backend belum mengirim status void/deleted di list ini
+  const pendingCount = filteredTransactions.filter(t => !t.isPaid).length;
 
   if (!isMounted) return null;
 
   return (
-    // PERBAIKAN 1: Menggunakan w-full agar layout lebar penuh (tidak ditengah)
     <div className="space-y-6 pb-10 p-6 md:p-8 w-full">
       
       {/* Header */}
@@ -88,7 +102,7 @@ export default function TransactionsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input 
                 type="text" 
-                placeholder="Cari ID Transaksi..." 
+                placeholder="Cari Kode / Produk..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
@@ -103,11 +117,11 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Stats Cards (Ringkasan) */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-              <p className="text-gray-500 text-sm">Total Pendapatan</p>
+              <p className="text-gray-500 text-sm">Total Pendapatan (Lunas)</p>
               <h3 className="text-xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</h3>
           </div>
           <div className="p-2 bg-green-100 rounded-lg text-green-600">
@@ -116,7 +130,7 @@ export default function TransactionsPage() {
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-              <p className="text-gray-500 text-sm">Transaksi Berhasil</p>
+              <p className="text-gray-500 text-sm">Transaksi Lunas</p>
               <h3 className="text-xl font-bold text-gray-900">{successCount}</h3>
           </div>
           <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
@@ -125,11 +139,11 @@ export default function TransactionsPage() {
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-              <p className="text-gray-500 text-sm">Dibatalkan (Void)</p>
-              <h3 className="text-xl font-bold text-gray-900">{voidCount}</h3>
+              <p className="text-gray-500 text-sm">Belum Lunas / Pending</p>
+              <h3 className="text-xl font-bold text-gray-900">{pendingCount}</h3>
           </div>
-          <div className="p-2 bg-red-100 rounded-lg text-red-600">
-              <ArrowDownRight className="w-5 h-5" />
+          <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
+              <Clock className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -174,72 +188,79 @@ export default function TransactionsPage() {
       {/* Tabel Transaksi */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium uppercase text-xs">
-              <tr>
-                <th className="px-6 py-4">ID Transaksi</th>
-                <th className="px-6 py-4">Waktu</th>
-                <th className="px-6 py-4">Detail Barang</th>
-                <th className="px-6 py-4">Total</th>
-                <th className="px-6 py-4 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredTransactions.length === 0 ? (
+          {isLoading ? (
+             <div className="p-10 text-center text-gray-500">Memuat data transaksi...</div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium uppercase text-xs">
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Clock className="w-10 h-10 text-gray-200" />
-                      <p>Belum ada transaksi pada periode ini.</p>
-                    </div>
-                  </td>
+                  <th className="px-6 py-4">Kode Transaksi</th>
+                  <th className="px-6 py-4">Waktu</th>
+                  <th className="px-6 py-4">Detail Barang</th>
+                  <th className="px-6 py-4">Metode</th>
+                  <th className="px-6 py-4">Total</th>
+                  <th className="px-6 py-4 text-center">Status</th>
                 </tr>
-              ) : (
-                filteredTransactions.map((txn) => (
-                  <tr 
-                    key={txn.id} 
-                    onClick={() => router.push(`/owner/transactions/${txn.id}`)}
-                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                  >
-                    <td className="px-6 py-4 font-mono text-gray-500 group-hover:text-blue-600 transition-colors">
-                      #{txn.id.slice(-6)}
-                    </td>
-                    <td className="px-6 py-4 text-gray-700">
-                      {formatDate(txn.date)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        {/* PERBAIKAN 2: Hanya menampilkan maksimal 2 barang */}
-                        {txn.items.slice(0, 2).map((item, idx) => (
-                          <span key={idx} className="text-gray-600">
-                            {item.product.name} <span className="text-gray-400">x{item.quantity}</span>
-                          </span>
-                        ))}
-                        {/* Jika lebih dari 2, tampilkan '...dan lainnya' */}
-                        {txn.items.length > 2 && (
-                          <span className="text-xs text-gray-400 italic">
-                            ...dan {txn.items.length - 2} lainnya
-                          </span>
-                        )}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Clock className="w-10 h-10 text-gray-200" />
+                        <p>Belum ada transaksi pada periode ini.</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-gray-900">
-                      {formatCurrency(txn.total)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        txn.status === 'completed' 
-                          ? 'bg-green-50 text-green-700 border-green-200' 
-                          : 'bg-red-50 text-red-700 border-red-200'
-                      }`}>
-                        {txn.status === 'completed' ? 'Berhasil' : 'Dibatalkan'}
-                      </span>
-                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredTransactions.map((txn) => (
+                    <tr 
+                      key={txn.transactionId} 
+                      onClick={() => router.push(`/owner/transactions/${txn.transactionId}`)}
+                      className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                    >
+                      <td className="px-6 py-4 font-mono text-gray-500 group-hover:text-blue-600 transition-colors">
+                        {txn.code}
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {formatDate(txn.createdAt)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          {/* Mapping details dari DTO baru */}
+                          {txn.details?.slice(0, 2).map((item, idx) => (
+                            <span key={idx} className="text-gray-600">
+                              {item.productName} <span className="text-gray-400">x{item.quantity}</span>
+                            </span>
+                          ))}
+                          {txn.details && txn.details.length > 2 && (
+                            <span className="text-xs text-gray-400 italic">
+                              ...dan {txn.details.length - 2} lainnya
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600 capitalize">
+                        {txn.payment}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-gray-900">
+                        {formatCurrency(txn.totalAmount)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                          txn.isPaid
+                            ? 'bg-green-50 text-green-700 border-green-200' 
+                            : 'bg-orange-50 text-orange-700 border-orange-200'
+                        }`}>
+                          {txn.isPaid ? 'Lunas' : 'Pending'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
