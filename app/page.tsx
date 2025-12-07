@@ -40,6 +40,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
+  console.log(process.env.NEXT_PUBLIC_API_URL);
+
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
