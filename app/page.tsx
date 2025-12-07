@@ -183,7 +183,7 @@ export default function Home() {
                   type="submit"
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-6 shadow-lg"
                   onClick={() => {
-                    onSubmit();
+                    onSubmit;
                   }}
                 >
                   Sign in
