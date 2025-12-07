@@ -1,14 +1,28 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit2, Trash2, Package, Tag, Save, X, Search, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Tag, Save, X, Search, Check, Loader2 } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import type { Product, Category } from '@/types';
 import { useProductStore } from "@/store/productStore";
 
-type EditingProduct = Partial<Product> & { id?: string };
-type EditingCategory = Partial<Category> & { id?: string };
+// Tipe lokal untuk form state
+type ProductForm = {
+  id?: string; // Optional, hanya ada saat edit
+  name: string;
+  price: number;
+  discount: number;
+  categoryId: string;
+  description: string;
+  imageUrl: string;
+};
+
+type CategoryForm = {
+  id?: string;
+  name: string;
+  description: string;
+};
 
 export default function ProductManagementPage() {
   const router = useRouter();
@@ -16,21 +30,33 @@ export default function ProductManagementPage() {
   const { 
     products, 
     categories, 
-    addProduct, 
+    fetchProducts,
+    createProduct, 
     updateProduct, 
     deleteProduct,
-    addCategory,
-    updateCategory,
-    deleteCategory 
+    fetchCategories,
+    createCategory,
+    deleteCategory,
+    isLoading
   } = useProductStore();
   
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
-  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
-  const [editingCategory, setEditingCategory] = useState<EditingCategory | null>(null);
+  
+  // State Modal & Form
   const [showProductModal, setShowProductModal] = useState(false);
+  const [productForm, setProductForm] = useState<ProductForm | null>(null);
+
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string>('');
+  const [categoryForm, setCategoryForm] = useState<CategoryForm | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load data awal
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -40,106 +66,89 @@ export default function ProductManagementPage() {
     }).format(amount);
   };
 
-  const isTailwindClass = (color: string | undefined) => {
-    return color && color.startsWith('bg-');
-  };
-
-  // --- Logic Produk ---
+  // --- HANDLERS PRODUK ---
   const handleAddProduct = () => {
-    setEditingProduct({
+    setProductForm({
       name: '',
       price: 0,
-      stock: 0,
-      categoryId: categories[0]?.id || '',
-      description: '', // Reset deskripsi
+      discount: 0,
+      categoryId: categories[0]?.categoryId || '',
+      description: '',
+      imageUrl: '',
     });
     setShowProductModal(true);
   };
 
   const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setImageUrl(product.image || '');
+    setProductForm({
+      id: product.productId,
+      name: product.name,
+      price: product.price,
+      discount: product.discount || 0,
+      categoryId: product.categoryId || '',
+      description: product.description || '',
+      imageUrl: product.imageUrl || '',
+    });
     setShowProductModal(true);
   };
 
-  const handleSaveProduct = () => {
-    if (!editingProduct || !editingProduct.name || !editingProduct.price || !editingProduct.categoryId) return;
+  const handleSaveProduct = async () => {
+    if (!productForm || !productForm.name || !productForm.price) return;
+    setIsSubmitting(true);
 
-    if (editingProduct.id) {
-      updateProduct(editingProduct as Product);
+    const payload = {
+      name: productForm.name,
+      price: Number(productForm.price),
+      discount: Number(productForm.discount),
+      // PERBAIKAN: Gunakan undefined agar sesuai dengan tipe di store
+      categoryId: productForm.categoryId || undefined,
+      description: productForm.description,
+      imageUrl: productForm.imageUrl
+    };
+
+    let success = false;
+    if (productForm.id) {
+      success = await updateProduct(productForm.id, payload);
     } else {
-      const newProduct: Product = {
-        ...editingProduct as Product,
-        id: `prod-${Date.now()}`,
-      };
-      addProduct(newProduct);
+      success = await createProduct(payload);
     }
 
-    setShowProductModal(false);
-    setEditingProduct(null);
-    setImageUrl('');
+    setIsSubmitting(false);
+    if (success) setShowProductModal(false);
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      deleteProduct(productId);
+      await deleteProduct(id);
     }
   };
 
-  // --- Logic Kategori ---
+  // --- HANDLERS KATEGORI ---
   const handleAddCategory = () => {
-    setEditingCategory({
-      name: '',
-      color: 'bg-blue-500',
+    setCategoryForm({ name: '', description: '' });
+    setShowCategoryModal(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryForm || !categoryForm.name) return;
+    setIsSubmitting(true);
+
+    const success = await createCategory({
+      name: categoryForm.name,
+      description: categoryForm.description
     });
-    setShowCategoryModal(true);
+
+    setIsSubmitting(false);
+    if (success) setShowCategoryModal(false);
   };
 
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setShowCategoryModal(true);
-  };
-
-  const handleSaveCategory = () => {
-    if (!editingCategory || !editingCategory.name || !editingCategory.color) return;
-
-    if (editingCategory.id) {
-      updateCategory(editingCategory as Category);
-    } else {
-      const newCategory: Category = {
-        ...editingCategory as Category,
-        id: `cat-${Date.now()}`,
-      };
-      addCategory(newCategory);
-    }
-
-    setShowCategoryModal(false);
-    setEditingCategory(null);
-  };
-
-  const handleDeleteCategory = (categoryId: string) => {
-    const hasProducts = products.some(p => p.categoryId === categoryId);
-    if (hasProducts) {
-      alert('Tidak dapat menghapus kategori yang masih memiliki produk!');
-      return;
-    }
-
+  const handleDeleteCategory = async (id: string) => {
     if (confirm('Yakin ingin menghapus kategori ini?')) {
-      deleteCategory(categoryId);
+      await deleteCategory(id);
     }
   };
 
-  const colorOptions = [
-    { name: 'Biru', value: 'bg-blue-500', hex: '#3B82F6' },
-    { name: 'Hijau', value: 'bg-green-500', hex: '#10B981' },
-    { name: 'Merah', value: 'bg-red-500', hex: '#EF4444' },
-    { name: 'Kuning', value: 'bg-yellow-500', hex: '#EAB308' },
-    { name: 'Ungu', value: 'bg-purple-500', hex: '#8B5CF6' },
-    { name: 'Pink', value: 'bg-pink-500', hex: '#EC4899' },
-    { name: 'Orange', value: 'bg-orange-500', hex: '#F97316' },
-    { name: 'Indigo', value: 'bg-indigo-500', hex: '#6366F1' },
-  ];
-
+  // Filter Produk
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -168,6 +177,7 @@ export default function ProductManagementPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Tabs */}
         <div className="border-b border-gray-200 px-6 pt-2">
           <div className="flex gap-6">
             <button
@@ -196,7 +206,9 @@ export default function ProductManagementPage() {
         </div>
 
         <div className="p-6">
-          {activeTab === 'products' ? (
+          {isLoading ? (
+            <div className="text-center py-10"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
+          ) : activeTab === 'products' ? (
             <>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-gray-900 font-semibold text-lg">Daftar Produk</h2>
@@ -211,62 +223,52 @@ export default function ProductManagementPage() {
                     <tr>
                       <th className="py-3 px-4">Nama</th>
                       <th className="py-3 px-4">Kategori</th>
-                      <th className="py-3 px-4">Deskripsi</th> {/* Kolom Baru */}
                       <th className="py-3 px-4">Harga</th>
-                      <th className="py-3 px-4">Stok</th>
+                      <th className="py-3 px-4">Diskon</th>
                       <th className="py-3 px-4 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-12 text-gray-500">
-                          {searchTerm ? 'Produk tidak ditemukan.' : 'Belum ada produk. Klik "Tambah Produk" untuk mulai.'}
+                        <td colSpan={5} className="text-center py-12 text-gray-500">
+                          {searchTerm ? 'Produk tidak ditemukan.' : 'Belum ada produk.'}
                         </td>
                       </tr>
                     ) : (
                       filteredProducts.map(product => {
-                        const category = categories.find(c => c.id === product.categoryId);
-                        const isTailwind = isTailwindClass(category?.color);
+                        const category = categories.find(c => c.categoryId === product.categoryId);
+                        const catColor = (category as any)?.color || 'bg-gray-500'; 
                         
                         return (
-                          <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                          <tr key={product.productId} className="hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-4 font-medium text-gray-900">
                               <div className="flex items-center gap-3">
-                                {product.image && (
+                                {product.imageUrl && (
                                   <div className="w-8 h-8 rounded bg-gray-100 overflow-hidden shrink-0">
-                                    <ImageWithFallback src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                    <ImageWithFallback src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                                   </div>
                                 )}
                                 {product.name}
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              {category && (
-                                <span 
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-100 ${
-                                    isTailwind ? `${category.color} bg-opacity-10 text-gray-700` : 'text-white'
-                                  }`}
-                                  style={!isTailwind ? { backgroundColor: category.color } : {}}
-                                >
-                                  <span className={`w-1.5 h-1.5 rounded-full ${isTailwind ? category.color : 'bg-white'}`}></span>
+                              {category ? (
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${catColor}`}>
                                   {category.name}
                                 </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-gray-500 max-w-[200px] truncate">
-                              {product.description || '-'}
+                              ) : <span className="text-gray-400 text-xs italic">Tanpa Kategori</span>}
                             </td>
                             <td className="py-3 px-4 font-mono text-gray-600">{formatCurrency(product.price)}</td>
-                            <td className="py-3 px-4">
-                              <span className={`font-medium ${product.stock <= 10 ? 'text-red-600' : 'text-gray-700'}`}>
-                                {product.stock} {product.stock <= 10 && '!'}
-                              </span>
+                            <td className="py-3 px-4 text-gray-500">
+                              {product.discount > 0 ? (
+                                <span className="text-red-500">-{formatCurrency(product.discount)}</span>
+                              ) : '-'}
                             </td>
                             <td className="py-3 px-4 text-right">
                               <div className="flex justify-end gap-2">
                                 <button onClick={() => handleEditProduct(product)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors border border-transparent hover:border-blue-100"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => handleDeleteProduct(product.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors border border-transparent hover:border-red-100"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={() => handleDeleteProduct(product.productId)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors border border-transparent hover:border-red-100"><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </td>
                           </tr>
@@ -278,7 +280,7 @@ export default function ProductManagementPage() {
               </div>
             </>
           ) : (
-            // --- BAGIAN KATEGORI ---
+            // --- TAB KATEGORI ---
             <>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-gray-900 font-semibold text-lg">Daftar Kategori</h2>
@@ -289,28 +291,20 @@ export default function ProductManagementPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {categories.map(category => {
-                  const productCount = products.filter(p => p.categoryId === category.id).length;
-                  const isTailwind = isTailwindClass(category.color);
-
+                  const catColor = (category as any)?.color || 'bg-gray-500';
                   return (
-                    <div key={category.id} className="border border-gray-200 rounded-xl p-4 bg-white hover:border-blue-200 hover:shadow-sm transition-all group">
+                    <div key={category.categoryId} className="border border-gray-200 rounded-xl p-4 bg-white hover:border-blue-200 hover:shadow-sm transition-all group">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div 
-                            className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center ${isTailwind ? category.color : ''}`}
-                            style={!isTailwind ? { backgroundColor: category.color } : {}}
-                          >
-                            <Tag className="w-5 h-5 text-white opacity-80" />
+                          <div className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center ${catColor}`}>
+                            <Tag className="w-5 h-5 text-white opacity-90" />
                           </div>
                           <div>
                             <div className="text-gray-900 font-bold">{category.name}</div>
-                            <div className="text-xs text-gray-500">{productCount} produk</div>
+                            <div className="text-xs text-gray-500">{category.description || 'Tidak ada deskripsi'}</div>
                           </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditCategory(category)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteCategory(category.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" disabled={productCount > 0}><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                        <button onClick={() => handleDeleteCategory(category.categoryId)} className="p-1.5 text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                   );
@@ -321,67 +315,45 @@ export default function ProductManagementPage() {
         </div>
       </div>
 
-      {/* Product Modal */}
-      {showProductModal && editingProduct && (
+      {/* Modal Produk */}
+      {showProductModal && productForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6 border-b pb-4">
               <h3 className="font-bold text-lg text-gray-900">
-                {editingProduct.id ? 'Edit Produk' : 'Tambah Produk Baru'}
+                {productForm.id ? 'Edit Produk' : 'Tambah Produk Baru'}
               </h3>
-              <button onClick={() => setShowProductModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setShowProductModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gambar URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm outline-none"
-                  />
-                  <button
-                    onClick={() => setEditingProduct({ ...editingProduct, image: imageUrl })}
-                    className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 font-medium text-gray-700"
-                  >
-                    Set
-                  </button>
-                </div>
-                {(editingProduct.image || imageUrl) && (
-                  <div className="mt-2 h-32 w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
-                    <ImageWithFallback
-                      src={editingProduct.image || imageUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                <input
+                  type="text"
+                  placeholder="https://..."
+                  value={productForm.imageUrl}
+                  onChange={(e) => setProductForm({ ...productForm, imageUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk *</label>
                 <input
                   type="text"
-                  value={editingProduct.name || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder="Contoh: Nasi Goreng"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
-              {/* Input Deskripsi Baru */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                 <textarea
-                  value={editingProduct.description || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[80px]"
-                  placeholder="Contoh: Pedas manis, extra telur..."
+                  value={productForm.description}
+                  onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20"
                 />
               </div>
 
@@ -390,113 +362,92 @@ export default function ProductManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Harga (Rp) *</label>
                   <input
                     type="number"
-                    value={editingProduct.price || 0}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, price: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Stok *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Diskon (Rp)</label>
                   <input
                     type="number"
-                    value={editingProduct.stock || 0}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, stock: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    value={productForm.discount}
+                    onChange={(e) => setProductForm({ ...productForm, discount: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                 <select
-                  value={editingProduct.categoryId || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, categoryId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                  value={productForm.categoryId}
+                  onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
+                  <option value="">-- Pilih Kategori --</option>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.categoryId} value={cat.categoryId}>{cat.name}</option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div className="flex gap-3 mt-8 pt-4 border-t border-gray-100">
-              <button onClick={() => setShowProductModal(false)} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">Batal</button>
-              <button onClick={handleSaveProduct} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium shadow-sm transition-all hover:shadow-md"><Save className="w-4 h-4" /> Simpan</button>
+              <button onClick={() => setShowProductModal(false)} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">Batal</button>
+              <button 
+                onClick={handleSaveProduct} 
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                Simpan
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Category Modal (TETAP SAMA SEPERTI SEBELUMNYA DENGAN COLOR PICKER) */}
-      {showCategoryModal && editingCategory && (
+      {/* Modal Kategori */}
+      {showCategoryModal && categoryForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6 border-b pb-4">
-              <h3 className="font-bold text-lg text-gray-900">
-                {editingCategory.id ? 'Edit Kategori' : 'Tambah Kategori'}
-              </h3>
-              <button onClick={() => setShowCategoryModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <h3 className="font-bold text-lg text-gray-900">Tambah Kategori</h3>
+              <button onClick={() => setShowCategoryModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nama Kategori *</label>
                 <input
                   type="text"
-                  value={editingCategory.name || ''}
-                  onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder="Contoh: Minuman"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Warna Label *</label>
-                <div className="grid grid-cols-5 gap-3 mb-3">
-                  {colorOptions.map(color => (
-                    <button
-                      key={color.value}
-                      onClick={() => setEditingCategory({ ...editingCategory, color: color.value })}
-                      className={`h-10 rounded-lg relative flex items-center justify-center ${color.value} ${
-                        editingCategory.color === color.value 
-                          ? 'ring-2 ring-offset-2 ring-blue-500 scale-105 shadow-md' 
-                          : 'hover:scale-105 transition-transform hover:shadow-sm'
-                      }`}
-                      title={color.name}
-                    >
-                      {editingCategory.color === color.value && <Check className="w-4 h-4 text-white" />}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="relative overflow-hidden w-10 h-10 rounded-full shadow-sm border border-gray-300 shrink-0">
-                    <input 
-                      type="color" 
-                      value={!isTailwindClass(editingCategory.color) ? editingCategory.color : '#000000'}
-                      onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
-                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700">Warna Custom</p>
-                    <p className="text-xs text-gray-500">Klik lingkaran untuk memilih bebas</p>
-                  </div>
-                  {!isTailwindClass(editingCategory.color) && (
-                    <div className="text-xs font-mono bg-white px-2 py-1 rounded border text-gray-600">
-                      {editingCategory.color}
-                    </div>
-                  )}
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                <input
+                  type="text"
+                  value={categoryForm.description}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
               </div>
             </div>
 
             <div className="flex gap-3 mt-8 pt-4 border-t border-gray-100">
-              <button onClick={() => setShowCategoryModal(false)} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">Batal</button>
-              <button onClick={handleSaveCategory} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium shadow-sm transition-all hover:shadow-md"><Save className="w-4 h-4" /> Simpan</button>
+              <button onClick={() => setShowCategoryModal(false)} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">Batal</button>
+              <button 
+                onClick={handleSaveCategory} 
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                Simpan
+              </button>
             </div>
           </div>
         </div>
