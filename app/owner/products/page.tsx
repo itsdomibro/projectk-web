@@ -7,9 +7,8 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import type { Product, Category } from '@/types';
 import { useProductStore } from "@/store/productStore";
 
-// Tipe lokal untuk form state
 type ProductForm = {
-  id?: string; // Optional, hanya ada saat edit
+  id?: string;
   name: string;
   price: number;
   discount: number;
@@ -22,6 +21,7 @@ type CategoryForm = {
   id?: string;
   name: string;
   description: string;
+  color: string; // Tambahkan field color di form
 };
 
 export default function ProductManagementPage() {
@@ -52,7 +52,6 @@ export default function ProductManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load data awal
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -65,6 +64,23 @@ export default function ProductManagementPage() {
       minimumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Helper untuk cek apakah warna adalah class Tailwind
+  const isTailwindClass = (color: string | undefined) => {
+    return color && color.startsWith('bg-');
+  };
+
+  // Opsi warna untuk UI
+  const colorOptions = [
+    { name: 'Biru', value: 'bg-blue-500', hex: '#3B82F6' },
+    { name: 'Hijau', value: 'bg-green-500', hex: '#10B981' },
+    { name: 'Merah', value: 'bg-red-500', hex: '#EF4444' },
+    { name: 'Kuning', value: 'bg-yellow-500', hex: '#EAB308' },
+    { name: 'Ungu', value: 'bg-purple-500', hex: '#8B5CF6' },
+    { name: 'Pink', value: 'bg-pink-500', hex: '#EC4899' },
+    { name: 'Orange', value: 'bg-orange-500', hex: '#F97316' },
+    { name: 'Indigo', value: 'bg-indigo-500', hex: '#6366F1' },
+  ];
 
   // --- HANDLERS PRODUK ---
   const handleAddProduct = () => {
@@ -100,7 +116,6 @@ export default function ProductManagementPage() {
       name: productForm.name,
       price: Number(productForm.price),
       discount: Number(productForm.discount),
-      // PERBAIKAN: Gunakan undefined agar sesuai dengan tipe di store
       categoryId: productForm.categoryId || undefined,
       description: productForm.description,
       imageUrl: productForm.imageUrl
@@ -125,7 +140,8 @@ export default function ProductManagementPage() {
 
   // --- HANDLERS KATEGORI ---
   const handleAddCategory = () => {
-    setCategoryForm({ name: '', description: '' });
+    // Default warna biru
+    setCategoryForm({ name: '', description: '', color: 'bg-blue-500' });
     setShowCategoryModal(true);
   };
 
@@ -135,7 +151,8 @@ export default function ProductManagementPage() {
 
     const success = await createCategory({
       name: categoryForm.name,
-      description: categoryForm.description
+      description: categoryForm.description,
+      color: categoryForm.color // Kirim warna ke Store/API
     });
 
     setIsSubmitting(false);
@@ -148,7 +165,6 @@ export default function ProductManagementPage() {
     }
   };
 
-  // Filter Produk
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -209,6 +225,7 @@ export default function ProductManagementPage() {
           {isLoading ? (
             <div className="text-center py-10"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>
           ) : activeTab === 'products' ? (
+            // --- TAB PRODUK ---
             <>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-gray-900 font-semibold text-lg">Daftar Produk</h2>
@@ -238,8 +255,10 @@ export default function ProductManagementPage() {
                     ) : (
                       filteredProducts.map(product => {
                         const category = categories.find(c => c.categoryId === product.categoryId);
+                        // Ambil warna dari kategori (gunakan any untuk bypass properti color yg mungkin blm ada di type BE)
                         const catColor = (category as any)?.color || 'bg-gray-500'; 
-                        
+                        const isTailwind = isTailwindClass(catColor);
+
                         return (
                           <tr key={product.productId} className="hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-4 font-medium text-gray-900">
@@ -254,7 +273,12 @@ export default function ProductManagementPage() {
                             </td>
                             <td className="py-3 px-4">
                               {category ? (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${catColor}`}>
+                                <span 
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    isTailwind ? `${catColor} text-white` : 'text-white'
+                                  }`}
+                                  style={!isTailwind ? { backgroundColor: catColor } : {}}
+                                >
                                   {category.name}
                                 </span>
                               ) : <span className="text-gray-400 text-xs italic">Tanpa Kategori</span>}
@@ -292,11 +316,16 @@ export default function ProductManagementPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {categories.map(category => {
                   const catColor = (category as any)?.color || 'bg-gray-500';
+                  const isTailwind = isTailwindClass(catColor);
+
                   return (
                     <div key={category.categoryId} className="border border-gray-200 rounded-xl p-4 bg-white hover:border-blue-200 hover:shadow-sm transition-all group">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center ${catColor}`}>
+                          <div 
+                            className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center ${isTailwind ? catColor : ''}`}
+                            style={!isTailwind ? { backgroundColor: catColor } : {}}
+                          >
                             <Tag className="w-5 h-5 text-white opacity-90" />
                           </div>
                           <div>
@@ -408,7 +437,7 @@ export default function ProductManagementPage() {
         </div>
       )}
 
-      {/* Modal Kategori */}
+      {/* Modal Kategori (DENGAN COLOR PICKER) */}
       {showCategoryModal && categoryForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
@@ -427,6 +456,43 @@ export default function ProductManagementPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
+              
+              {/* INPUT WARNA (DIKEMBALIKAN) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Warna Label *</label>
+                <div className="grid grid-cols-5 gap-3 mb-3">
+                  {colorOptions.map(color => (
+                    <button
+                      key={color.value}
+                      onClick={() => setCategoryForm({ ...categoryForm, color: color.value })}
+                      className={`h-8 rounded-lg relative flex items-center justify-center ${color.value} ${
+                        categoryForm.color === color.value 
+                          ? 'ring-2 ring-offset-2 ring-blue-500 scale-105 shadow-md' 
+                          : 'hover:scale-105 transition-transform hover:shadow-sm'
+                      }`}
+                      title={color.name}
+                    >
+                      {categoryForm.color === color.value && <Check className="w-4 h-4 text-white" />}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Custom Color Input */}
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="relative overflow-hidden w-8 h-8 rounded-full shadow-sm border border-gray-300 shrink-0">
+                    <input 
+                      type="color" 
+                      value={!isTailwindClass(categoryForm.color) ? categoryForm.color : '#000000'}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
+                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700">Warna Custom</p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                 <input

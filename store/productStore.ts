@@ -2,16 +2,7 @@ import { create } from 'zustand';
 import api from '@/services/api';
 import { Product, Category } from '@/types';
 
-// Helper untuk generate warna kategori secara berurutan
-const getCategoryColor = (index: number) => {
-  const colors = [
-    'bg-orange-500', 'bg-blue-500', 'bg-green-500', 
-    'bg-purple-500', 'bg-red-500', 'bg-indigo-500', 
-    'bg-pink-500', 'bg-teal-500'
-  ];
-  return colors[index % colors.length];
-};
-
+// Update tipe data untuk menerima color
 type CreateProductDto = {
   name: string;
   description?: string;
@@ -24,6 +15,7 @@ type CreateProductDto = {
 type CreateCategoryDto = {
   name: string;
   description?: string;
+  color?: string; // Tambahkan ini
 };
 
 interface ProductState {
@@ -91,14 +83,14 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
 
-  // --- BAGIAN PENTING: Inject Warna di sini ---
   fetchCategories: async () => {
     try {
       const res = await api.get('/category');
-      // Mapping manual untuk menyuntikkan warna karena BE tidak punya field color
-      const categoriesWithColor = res.data.map((cat: any, index: number) => ({
+      // Kita asumsikan Backend SUDAH mengirim property 'color'.
+      // Jika belum (field kosong), kita beri fallback default.
+      const categoriesWithColor = res.data.map((cat: any) => ({
         ...cat,
-        color: getCategoryColor(index) 
+        color: cat.color || 'bg-blue-500' 
       }));
       set({ categories: categoriesWithColor });
     } catch (error) {
@@ -108,6 +100,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   createCategory: async (data) => {
     try {
+      // Kirim data beserta warnanya ke Backend
       await api.post('/category', data);
       await get().fetchCategories();
       return true;
