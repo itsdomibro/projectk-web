@@ -25,6 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { ShoppingCart, Package } from "lucide-react";
+import Link from "next/link";
 
 const loginSchema = z.object({
   email: z.string().email("Email tidak valid"),
@@ -195,6 +196,10 @@ export default function Home() {
           <CardFooter className="flex flex-col space-y-4">
             <div className="pt-4 border-t border-gray-200 w-full">
               <div className="text-xs text-gray-500 text-center space-y-2">
+                <span>
+                  Don't have an account yet?{" "}
+                  <Link href="/auth/register">Register</Link>
+                </span>
                 <p className="font-semibold text-gray-700">Login sebagai:</p>
                 <div className="flex justify-center gap-4">
                   <div className="flex items-center gap-2">

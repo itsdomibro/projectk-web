@@ -46,7 +46,7 @@ export default function LoginPage() {
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
       await login(values);
-      router.push("auth/login");
+      router.push("/owner/dashboard");
       console.log(email);
       console.log(role);
     } catch (error) {

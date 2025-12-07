@@ -52,7 +52,7 @@ export default function RegisterPage() {
   const onSubmit = async (values: z.infer<typeof registerSchema>) => {
     try {
       await register(values);
-      router.push("app/login");
+      router.push("/auth/login");
     } catch (error) {
       console.error("Registration failed: ", error);
     }
