@@ -225,3 +225,7 @@
 //     </div>
 //   );
 // }
+
+export default function HistoryIdPage() {
+  return;
+}
