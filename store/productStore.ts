@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import api from '@/services/api';
-import { Product, Category } from '@/types';
+import { create } from "zustand";
+import api from "@/services/api";
+import { Product, Category } from "@/types";
 
 // Update tipe data untuk menerima color
 type CreateProductDto = {
@@ -22,10 +22,13 @@ interface ProductState {
   products: Product[];
   categories: Category[];
   isLoading: boolean;
-  
+
   fetchProducts: () => Promise<void>;
   createProduct: (data: CreateProductDto) => Promise<boolean>;
-  updateProduct: (id: string, data: Partial<CreateProductDto>) => Promise<boolean>;
+  updateProduct: (
+    id: string,
+    data: Partial<CreateProductDto>
+  ) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<boolean>;
 
   fetchCategories: () => Promise<void>;
@@ -41,7 +44,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchProducts: async () => {
     set({ isLoading: true });
     try {
-      const res = await api.get('/products');
+      const res = await api.get("/products");
       set({ products: res.data });
     } catch (error) {
       console.error("Gagal ambil produk:", error);
@@ -52,7 +55,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   createProduct: async (data) => {
     try {
-      await api.post('/products', data);
+      await api.post("/products", data);
       await get().fetchProducts();
       return true;
     } catch (error) {
@@ -85,12 +88,12 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   fetchCategories: async () => {
     try {
-      const res = await api.get('/category');
+      const res = await api.get("/categories");
       // Kita asumsikan Backend SUDAH mengirim property 'color'.
       // Jika belum (field kosong), kita beri fallback default.
       const categoriesWithColor = res.data.map((cat: any) => ({
         ...cat,
-        color: cat.color || 'bg-blue-500' 
+        color: cat.color || "bg-blue-500",
       }));
       set({ categories: categoriesWithColor });
     } catch (error) {
@@ -101,7 +104,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   createCategory: async (data) => {
     try {
       // Kirim data beserta warnanya ke Backend
-      await api.post('/category', data);
+      await api.post("/categories", data);
       await get().fetchCategories();
       return true;
     } catch (error) {
@@ -112,12 +115,12 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   deleteCategory: async (id) => {
     try {
-      await api.delete(`/category/${id}`);
+      await api.delete(`/categories/${id}`);
       await get().fetchCategories();
       return true;
     } catch (error) {
       console.error("Gagal hapus kategori:", error);
       return false;
     }
-  }
+  },
 }));
